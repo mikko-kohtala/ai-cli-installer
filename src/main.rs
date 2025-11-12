@@ -160,7 +160,7 @@ fn check_command(cmd: &str, args: &[&str]) -> Option<String> {
 
 fn get_claude_version() -> ToolVersion {
     let installed = check_command("claude", &["--version"])
-        .and_then(|s| s.lines().next().map(|l| l.to_string()));
+        .and_then(|s| s.lines().next().map(|l| l.replace(" (Claude Code)", "")));
     ToolVersion::new("Claude Code").with_installed(installed)
 }
 
