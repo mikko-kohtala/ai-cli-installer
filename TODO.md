@@ -11,16 +11,16 @@ This document tracks the implementation status for each AI CLI tool across diffe
 
 ## Tools Status Table
 
-| Tool            | Version Check               | Install              | Uninstall                     | Upgrade            | Documentation                                   |
-| --------------- | --------------------------- | -------------------- | ----------------------------- | ------------------ | ----------------------------------------------- |
-| **Amp**         | 🔍 Not sure yet             | ⚠️ Need to implement | 🔍 Not sure yet               | 🔍 `amp update`    | 🔍 TBD                                          |
-| **Claude Code** | ✅ `claude --version`       | ⚠️ Custom (manual)   | ❌ Not implemented            | ❌ Not implemented | 🔍 TBD                                          |
-| **Codex**       | ✅ `codex --version`        | ✅ `npm install -g`  | ✅ `npm uninstall -g`         | ❌ Not implemented | 🔍 TBD                                          |
-| **Cursor CLI**  | 🔍 `cursor-agent --version` | ⚠️ Need to implement | 🔍 Not sure yet               | 🔍 Not sure yet    | ✅ [Docs](https://cursor.com/docs/cli/overview) |
-| **Copilot CLI** | ✅ `copilot --version`      | ✅ `npm install -g`  | ✅ `npm uninstall -g`         | ❌ Not implemented | ✅ [Docs](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) |
-| **Kilo**        | ✅ `kilo --version`         | ✅ GitHub binary     | ✅ Remove from /usr/local/bin | ❌ Not implemented | 🔍 TBD                                          |
-| **Gemini**      | ✅ `gemini --version`       | ✅ `npm install -g`  | ✅ `npm uninstall -g`         | ❌ Not implemented | 🔍 TBD                                          |
-| **Cline**       | ✅ `cline version`          | ✅ GitHub binary     | ✅ Remove from /usr/local/bin | ❌ Not implemented | 🔍 TBD                                          |
+| Tool            | Version Check               | Install            | Uninstall          | Upgrade            | Documentation                                                                   |
+| --------------- | --------------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------------------- |
+| **Amp**         | ✅ `amp --version`          | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+| **Claude Code** | ✅ `claude --version`       | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+| **Codex**       | ✅ `codex --version`        | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+| **Cursor CLI**  | ✅ `cursor-agent --version` | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | ✅ [Docs](https://cursor.com/docs/cli/overview)                                 |
+| **Copilot CLI** | ✅ `copilot --version`      | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | ✅ [Docs](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) |
+| **Kilo**        | ✅ `kilo --version`         | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+| **Gemini**      | ✅ `gemini --version`       | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+| **Cline**       | ✅ `cline version`          | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
 
 ## Detailed Implementation Notes
 

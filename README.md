@@ -24,14 +24,14 @@ ai-cli-installer uninstall  # Select and uninstall tools
 
 ## Supported Tools
 
-- **Amp** - Amp CLI
-- **Claude Code** - Claude CLI
-- **Codex** - OpenAI Codex CLI
-- **Cursor CLI** - Cursor Agent CLI
-- **Copilot CLI** - GitHub Copilot CLI
-- **Kilo** - Kilo code tool
-- **Gemini** - Google Gemini CLI
-- **Cline** - Cline CLI
+- **Amp**
+- **Claude Code**
+- **Code CLIx**
+- **Cursor CLI**
+- **Copilot CLI**
+- **Kilo Code CLI**
+- **Gemini CLI**
+- **Cline CLI** 
 
 ## Development
 
