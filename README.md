@@ -11,13 +11,15 @@ make install
 ## Commands
 
 ### Check Versions
+
 ```bash
 ai-cli-installer          # Show installed versions
 ai-cli-installer list     # Show installed versions (alias)
-ai-cli-installer check    # Check for latest versions available
+ai-cli-installer check    # Show installed versions (alias)
 ```
 
 ### Install Tools
+
 ```bash
 # Interactive mode - select from a menu
 ai-cli-installer install
@@ -29,6 +31,7 @@ ai-cli-installer add claude
 ```
 
 ### Uninstall Tools
+
 ```bash
 # Interactive mode - select from a menu
 ai-cli-installer uninstall
@@ -48,7 +51,7 @@ ai-cli-installer remove claude
 - **Copilot CLI**
 - **Kilo Code CLI**
 - **Gemini CLI**
-- **Cline CLI** 
+- **Cline CLI**
 
 ## Development
 
