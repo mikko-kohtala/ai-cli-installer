@@ -13,13 +13,30 @@ make install
 ### Check Versions
 ```bash
 ai-cli-installer          # Show installed versions
+ai-cli-installer list     # Show installed versions (alias)
 ai-cli-installer check    # Check for latest versions available
 ```
 
-### Interactive Install/Uninstall
+### Install Tools
 ```bash
-ai-cli-installer install    # Select and install tools
-ai-cli-installer uninstall  # Select and uninstall tools
+# Interactive mode - select from a menu
+ai-cli-installer install
+ai-cli-installer add       # Alias for install
+
+# Direct installation - specify tool name
+ai-cli-installer install claude
+ai-cli-installer add claude
+```
+
+### Uninstall Tools
+```bash
+# Interactive mode - select from a menu
+ai-cli-installer uninstall
+ai-cli-installer remove    # Alias for uninstall
+
+# Direct uninstallation - specify tool name
+ai-cli-installer uninstall claude
+ai-cli-installer remove claude
 ```
 
 ## Supported Tools

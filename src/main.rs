@@ -19,16 +19,35 @@ enum Commands {
     Check,
     /// Upgrade all tools (not implemented yet)
     Upgrade,
-    /// Install AI CLI tools interactively
-    Install,
-    /// Uninstall AI CLI tools interactively
-    Uninstall,
+    /// Install AI CLI tools (optionally specify tool name, e.g., 'claude')
+    Install {
+        /// Optional tool name to install directly (e.g., 'claude')
+        tool: Option<String>,
+    },
+    /// Install AI CLI tools (alias for install)
+    Add {
+        /// Optional tool name to install directly (e.g., 'claude')
+        tool: Option<String>,
+    },
+    /// Uninstall AI CLI tools (optionally specify tool name, e.g., 'claude')
+    Uninstall {
+        /// Optional tool name to uninstall directly (e.g., 'claude')
+        tool: Option<String>,
+    },
+    /// Uninstall AI CLI tools (alias for uninstall)
+    Remove {
+        /// Optional tool name to uninstall directly (e.g., 'claude')
+        tool: Option<String>,
+    },
+    /// List installed AI CLI tools (alias for default command)
+    List,
 }
 
 #[derive(Debug, Clone)]
 enum InstallMethod {
     Npm(String),           // NPM package name
     GitHub(String),        // GitHub repo (owner/repo)
+    Bootstrap(String),     // Bootstrap script URL
     Custom(String),        // Custom installation message
 }
 
@@ -270,9 +289,11 @@ fn get_all_tools() -> Vec<Tool> {
     vec![
         Tool::new(
             "Claude",
-            InstallMethod::Custom("Visit https://claude.ai to download".to_string()),
+            InstallMethod::Bootstrap(
+                "https://storage.googleapis.com/claude-code-dist-86c565f3-f756-42ad-8dfa-d59b1c096819/claude-code-releases/bootstrap.sh".to_string()
+            ),
             vec!["claude".to_string(), "--version".to_string()],
-        ),
+        ).with_binary_name("claude"),
         Tool::new(
             "Amp",
             InstallMethod::Custom("Visit Amp website for installation".to_string()),
@@ -320,6 +341,49 @@ async fn install_tool(tool: &Tool) -> Result<()> {
     println!("Installing {}...", tool.name.bright_cyan());
 
     match &tool.install_method {
+        InstallMethod::Bootstrap(url) => {
+            println!("{} Downloading bootstrap script...", "→".cyan());
+
+            // Download the bootstrap script
+            let script = reqwest::get(url)
+                .await
+                .context("Failed to download bootstrap script")?
+                .text()
+                .await
+                .context("Failed to read bootstrap script")?;
+
+            // Save to temporary file
+            let temp_dir = std::env::temp_dir();
+            let script_path = temp_dir.join("claude_bootstrap.sh");
+            std::fs::write(&script_path, script)
+                .context("Failed to write bootstrap script")?;
+
+            // Make it executable
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                let mut perms = std::fs::metadata(&script_path)?.permissions();
+                perms.set_mode(0o755);
+                std::fs::set_permissions(&script_path, perms)?;
+            }
+
+            println!("{} Running installation...", "→".cyan());
+
+            // Execute the bootstrap script
+            let status = Command::new("bash")
+                .arg(&script_path)
+                .status()
+                .context("Failed to run bootstrap script")?;
+
+            // Clean up
+            let _ = std::fs::remove_file(&script_path);
+
+            if status.success() {
+                println!("{} {} installed successfully!", "✓".green(), tool.name);
+            } else {
+                anyhow::bail!("Bootstrap installation failed for {}", tool.name);
+            }
+        }
         InstallMethod::Npm(package) => {
             let status = Command::new("npm")
                 .args(&["install", "-g", package])
@@ -421,6 +485,67 @@ async fn uninstall_tool(tool: &Tool) -> Result<()> {
     println!("Uninstalling {}...", tool.name.bright_cyan());
 
     match &tool.install_method {
+        InstallMethod::Bootstrap(_) => {
+            // Handle Claude-specific uninstallation
+            let home = std::env::var("HOME").context("HOME environment variable not set")?;
+            let binary_name = tool.binary_name.as_ref().unwrap_or(&tool.name);
+
+            // Remove symlink in ~/.local/bin
+            let symlink_path = std::path::Path::new(&home)
+                .join(".local")
+                .join("bin")
+                .join(binary_name);
+
+            // Remove versions directory
+            let versions_path = std::path::Path::new(&home)
+                .join(".local")
+                .join("share")
+                .join(binary_name)
+                .join("versions");
+
+            // Remove config directory
+            let config_path = std::path::Path::new(&home).join(format!(".{}", binary_name));
+
+            let mut removed_items = Vec::new();
+
+            if symlink_path.exists() {
+                std::fs::remove_file(&symlink_path)
+                    .context("Failed to remove binary symlink")?;
+                removed_items.push(format!("binary: {}", symlink_path.display()));
+            }
+
+            if versions_path.exists() {
+                std::fs::remove_dir_all(&versions_path.parent().unwrap())
+                    .context("Failed to remove versions directory")?;
+                removed_items.push(format!("versions: {}", versions_path.parent().unwrap().display()));
+            }
+
+            if config_path.exists() {
+                println!("{} Config directory found at: {}", "→".cyan(), config_path.display());
+                println!("{} Remove config directory? (contains settings and history) [y/N]", "?".yellow());
+
+                let mut input = String::new();
+                std::io::stdin().read_line(&mut input)?;
+
+                if input.trim().eq_ignore_ascii_case("y") {
+                    std::fs::remove_dir_all(&config_path)
+                        .context("Failed to remove config directory")?;
+                    removed_items.push(format!("config: {}", config_path.display()));
+                } else {
+                    println!("{} Keeping config directory", "→".cyan());
+                }
+            }
+
+            if removed_items.is_empty() {
+                println!("{} {} not found on system", "!".yellow(), tool.name);
+            } else {
+                println!("{} {} uninstalled successfully!", "✓".green(), tool.name);
+                println!("{} Removed:", "→".cyan());
+                for item in removed_items {
+                    println!("  - {}", item);
+                }
+            }
+        }
         InstallMethod::Npm(package) => {
             let status = Command::new("npm")
                 .args(&["uninstall", "-g", package])
@@ -455,10 +580,27 @@ async fn uninstall_tool(tool: &Tool) -> Result<()> {
     Ok(())
 }
 
-async fn handle_install_command() -> Result<()> {
+async fn handle_install_command(tool_name: Option<&str>) -> Result<()> {
     let tools = get_all_tools();
 
-    // Separate installed and uninstalled tools
+    // If a specific tool is requested, install it directly
+    if let Some(name) = tool_name {
+        let tool = tools.iter().find(|t| t.name.eq_ignore_ascii_case(name))
+            .context(format!("Tool '{}' not found. Available tools: {}",
+                name,
+                tools.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
+            ))?;
+
+        if tool.is_installed() {
+            println!("{} {} is already installed!", "✓".green(), tool.name);
+            return Ok(());
+        }
+
+        install_tool(tool).await?;
+        return Ok(());
+    }
+
+    // Interactive mode: show multi-select menu
     let mut uninstalled_tools: Vec<&Tool> = tools.iter().filter(|t| !t.is_installed()).collect();
     let installed_tools: Vec<&Tool> = tools.iter().filter(|t| t.is_installed()).collect();
 
@@ -478,6 +620,7 @@ async fn handle_install_command() -> Result<()> {
         .map(|t| format!("{} ({})", t.name, match &t.install_method {
             InstallMethod::Npm(pkg) => format!("npm: {}", pkg),
             InstallMethod::GitHub(repo) => format!("github: {}", repo),
+            InstallMethod::Bootstrap(_) => "bootstrap".to_string(),
             InstallMethod::Custom(_) => "custom".to_string(),
         }))
         .collect();
@@ -524,10 +667,27 @@ async fn handle_install_command() -> Result<()> {
     Ok(())
 }
 
-async fn handle_uninstall_command() -> Result<()> {
+async fn handle_uninstall_command(tool_name: Option<&str>) -> Result<()> {
     let tools = get_all_tools();
 
-    // Filter to only installed tools
+    // If a specific tool is requested, uninstall it directly
+    if let Some(name) = tool_name {
+        let tool = tools.iter().find(|t| t.name.eq_ignore_ascii_case(name))
+            .context(format!("Tool '{}' not found. Available tools: {}",
+                name,
+                tools.iter().map(|t| t.name.as_str()).collect::<Vec<_>>().join(", ")
+            ))?;
+
+        if !tool.is_installed() {
+            println!("{} {} is not installed!", "!".yellow(), tool.name);
+            return Ok(());
+        }
+
+        uninstall_tool(tool).await?;
+        return Ok(());
+    }
+
+    // Interactive mode: show multi-select menu
     let mut installed_tools: Vec<&Tool> = tools.iter().filter(|t| t.is_installed()).collect();
 
     if installed_tools.is_empty() {
@@ -584,7 +744,7 @@ async fn main() -> Result<()> {
     println!("{}\n", "=".repeat(40).bright_cyan());
 
     match cli.command {
-        None => {
+        None | Some(Commands::List) => {
             // Show installed versions
             let tools = get_all_versions().await;
             for tool in &tools {
@@ -604,11 +764,11 @@ async fn main() -> Result<()> {
             println!("{}", "Upgrade functionality coming soon!".yellow());
             println!("This will upgrade all AI CLI tools to their latest versions.");
         }
-        Some(Commands::Install) => {
-            handle_install_command().await?;
+        Some(Commands::Install { tool }) | Some(Commands::Add { tool }) => {
+            handle_install_command(tool.as_deref()).await?;
         }
-        Some(Commands::Uninstall) => {
-            handle_uninstall_command().await?;
+        Some(Commands::Uninstall { tool }) | Some(Commands::Remove { tool }) => {
+            handle_uninstall_command(tool.as_deref()).await?;
         }
     }
 

@@ -2,6 +2,8 @@
 
 This document tracks the implementation status for each AI CLI tool across different operations.
 
+**⚠️ Note: Currently supports macOS only**
+
 ## Legend
 
 - ✅ Implemented
@@ -9,75 +11,99 @@ This document tracks the implementation status for each AI CLI tool across diffe
 - ❌ Not implemented
 - 🔍 Research needed
 
-## Tools Status Table
+## Amp
 
-| Tool            | Version Check               | Install            | Uninstall          | Upgrade            | Documentation                                                                   |
-| --------------- | --------------------------- | ------------------ | ------------------ | ------------------ | ------------------------------------------------------------------------------- |
-| **Amp**         | ✅ `amp --version`          | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
-| **Claude Code** | ✅ `claude --version`       | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
-| **Codex**       | ✅ `codex --version`        | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
-| **Cursor CLI**  | ✅ `cursor-agent --version` | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | ✅ [Docs](https://cursor.com/docs/cli/overview)                                 |
-| **Copilot CLI** | ✅ `copilot --version`      | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | ✅ [Docs](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) |
-| **Kilo**        | ✅ `kilo --version`         | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
-| **Gemini**      | ✅ `gemini --version`       | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
-| **Cline**       | ✅ `cline version`          | ❌ Not implemented | ❌ Not implemented | ❌ Not implemented | 🔍 TBD                                                                          |
+**Documentation**: [Docs](https://ampcode.com/manual)
 
-## Detailed Implementation Notes
+| Operation     | Status             | Command/Method                                      |
+| ------------- | ------------------ | --------------------------------------------------- |
+| Version Check | ✅ Implemented     | `amp --version`                                     |
+| Install       | ✅ Implemented     | `curl -fsSL https://ampcode.com/install.sh \| bash` |
+| Uninstall     | ❌ Not implemented |                                                     |
+| Upgrade       | ❌ Not implemented |                                                     |
 
-### Amp
+## Claude Code
 
-- **Install**: `curl -fsSL https://ampcode.com/install.sh | bash`
-- **Uninstall**: 🔍 Research needed
-- **Upgrade**: `amp update` command exists
-- **Version Check**: 🔍 Research needed - need to find the right command
+**Documentation**: [Docs](https://code.claude.com/docs)
 
-### Claude
+| Operation     | Status             | Command/Method     |
+| ------------- | ------------------ | ------------------ |
+| Version Check | ✅ Implemented     | `claude --version` |
+| Install       | ❌ Not implemented |                    |
+| Uninstall     | ❌ Not implemented |                    |
+| Upgrade       | ❌ Not implemented |                    |
 
-- **Install**: Requires manual download from https://claude.ai
-- **Uninstall**: Need to research (likely removing from Applications or bin)
-- **Upgrade**: Need to research if there's a CLI command
+## Codex CLI
 
-### Codex
+**Documentation**: [Docs](https://developers.openai.com/codex/cli/)
 
-- **Package**: `@openai/codex` on NPM
-- Full NPM lifecycle support
+| Operation     | Status             | Command/Method    |
+| ------------- | ------------------ | ----------------- |
+| Version Check | ✅ Implemented     | `codex --version` |
+| Install       | ❌ Not implemented |                   |
+| Uninstall     | ❌ Not implemented |                   |
+| Upgrade       | ❌ Not implemented |                   |
 
-### Cursor CLI
+## Cursor CLI
 
-- **Documentation**: https://cursor.com/docs/cli/overview
-- **Install**: Need to research - likely via npm or download from website
-- **Uninstall**: Need to research
-- **Upgrade**: Need to research if there's a CLI command
-- **Version Check**: Need to verify `cursor-agent --version` works
+**Documentation**: [Docs](https://cursor.com/docs/cli/overview)
 
-### Copilot CLI
+| Operation     | Status             | Command/Method           |
+| ------------- | ------------------ | ------------------------ |
+| Version Check | ✅ Implemented     | `cursor-agent --version` |
+| Install       | ❌ Not implemented |                          |
+| Uninstall     | ❌ Not implemented |                          |
+| Upgrade       | ❌ Not implemented |                          |
 
-- **Documentation**: https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli
-- **Package**: `@github/copilot` on NPM
-- Full NPM lifecycle support
+## Copilot CLI
 
-### Kilo
+**Documentation**: [Docs](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli)
 
-- **Repository**: `Kilo-Org/kilocode` on GitHub
-- Binary installation from GitHub releases
+| Operation     | Status             | Command/Method      |
+| ------------- | ------------------ | ------------------- |
+| Version Check | ✅ Implemented     | `copilot --version` |
+| Install       | ❌ Not implemented |                     |
+| Uninstall     | ❌ Not implemented |                     |
+| Upgrade       | ❌ Not implemented |                     |
 
-### Gemini
+## Kilo Code CLI
 
-- **Package**: `@google/gemini-cli` on NPM
-- Full NPM lifecycle support
+**Documentation**: [Docs](https://kilocode.ai/docs/cli)
 
-### Cline
+| Operation     | Status             | Command/Method   |
+| ------------- | ------------------ | ---------------- |
+| Version Check | ✅ Implemented     | `kilo --version` |
+| Install       | ❌ Not implemented |                  |
+| Uninstall     | ❌ Not implemented |                  |
+| Upgrade       | ❌ Not implemented |                  |
 
-- **Repository**: `cline/cline` on GitHub
-- Binary installation from GitHub releases
+## Gemini CLI
+
+**Documentation**: [Docs](https://docs.cloud.google.com/gemini/docs/codeassist/gemini-cli)
+
+| Operation     | Status             | Command/Method     |
+| ------------- | ------------------ | ------------------ |
+| Version Check | ✅ Implemented     | `gemini --version` |
+| Install       | ❌ Not implemented |                    |
+| Uninstall     | ❌ Not implemented |                    |
+| Upgrade       | ❌ Not implemented |                    |
+
+## Cline CLI
+
+**Documentation**: [Docs](https://docs.cline.bot/cline-cli/overview)
+
+| Operation     | Status             | Command/Method  |
+| ------------- | ------------------ | --------------- |
+| Version Check | ✅ Implemented     | `cline version` |
+| Install       | ❌ Not implemented |                 |
+| Uninstall     | ❌ Not implemented |                 |
+| Upgrade       | ❌ Not implemented |                 |
 
 ## Next Steps
 
-1. Research and document all tool documentation pages
-2. Research Cursor CLI (`cursor-agent`) - verify version check, install, uninstall, upgrade commands
-3. Research Amp's version check command
-4. Research Amp's uninstall process
-5. Implement Amp's install command using the install script
-6. Implement Cursor CLI support
-7. Research upgrade commands for all tools
-8. Implement upgrade functionality in the CLI
+1. Research Cursor CLI (`cursor-agent`) - verify version check, install, uninstall, upgrade commands
+2. Research Amp's uninstall process
+3. Research Claude Code install/uninstall/upgrade process
+4. Implement install commands for all tools
+5. Research upgrade commands for all tools
+6. Implement upgrade functionality in the CLI
