@@ -1,6 +1,7 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use colored::*;
+use inquire::MultiSelect;
 use serde::Deserialize;
 use std::process::Command;
 
@@ -18,6 +19,52 @@ enum Commands {
     Check,
     /// Upgrade all tools (not implemented yet)
     Upgrade,
+    /// Install AI CLI tools interactively
+    Install,
+    /// Uninstall AI CLI tools interactively
+    Uninstall,
+}
+
+#[derive(Debug, Clone)]
+enum InstallMethod {
+    Npm(String),           // NPM package name
+    GitHub(String),        // GitHub repo (owner/repo)
+    Custom(String),        // Custom installation message
+}
+
+#[derive(Debug, Clone)]
+struct Tool {
+    name: String,
+    install_method: InstallMethod,
+    check_command: Vec<String>,
+    binary_name: Option<String>,
+}
+
+impl Tool {
+    fn new(name: &str, install_method: InstallMethod, check_command: Vec<String>) -> Self {
+        Self {
+            name: name.to_string(),
+            install_method,
+            check_command,
+            binary_name: None,
+        }
+    }
+
+    fn with_binary_name(mut self, binary_name: &str) -> Self {
+        self.binary_name = Some(binary_name.to_string());
+        self
+    }
+
+    fn is_installed(&self) -> bool {
+        if self.check_command.is_empty() {
+            return false;
+        }
+        Command::new(&self.check_command[0])
+            .args(&self.check_command[1..])
+            .output()
+            .map(|output| output.status.success())
+            .unwrap_or(false)
+    }
 }
 
 #[derive(Debug)]
@@ -219,6 +266,316 @@ async fn check_latest_versions(tools: &mut [ToolVersion]) {
     }
 }
 
+fn get_all_tools() -> Vec<Tool> {
+    vec![
+        Tool::new(
+            "Claude",
+            InstallMethod::Custom("Visit https://claude.ai to download".to_string()),
+            vec!["claude".to_string(), "--version".to_string()],
+        ),
+        Tool::new(
+            "Amp",
+            InstallMethod::Custom("Visit Amp website for installation".to_string()),
+            vec!["amp".to_string(), "--version".to_string()],
+        ),
+        Tool::new(
+            "Codex",
+            InstallMethod::Npm("@openai/codex".to_string()),
+            vec!["codex".to_string(), "--version".to_string()],
+        ).with_binary_name("codex"),
+        Tool::new(
+            "Cursor",
+            InstallMethod::Custom("Visit https://cursor.sh to download".to_string()),
+            vec![
+                "defaults".to_string(),
+                "read".to_string(),
+                "/Applications/Cursor.app/Contents/Info.plist".to_string(),
+                "CFBundleShortVersionString".to_string(),
+            ],
+        ),
+        Tool::new(
+            "Copilot",
+            InstallMethod::Npm("@github/copilot".to_string()),
+            vec!["copilot".to_string(), "--version".to_string()],
+        ).with_binary_name("copilot"),
+        Tool::new(
+            "Kilo",
+            InstallMethod::GitHub("Kilo-Org/kilocode".to_string()),
+            vec!["kilo".to_string(), "--version".to_string()],
+        ).with_binary_name("kilo"),
+        Tool::new(
+            "Gemini",
+            InstallMethod::Npm("@google/gemini-cli".to_string()),
+            vec!["gemini".to_string(), "--version".to_string()],
+        ).with_binary_name("gemini"),
+        Tool::new(
+            "Cline",
+            InstallMethod::GitHub("cline/cline".to_string()),
+            vec!["cline".to_string(), "version".to_string()],
+        ).with_binary_name("cline"),
+    ]
+}
+
+async fn install_tool(tool: &Tool) -> Result<()> {
+    println!("Installing {}...", tool.name.bright_cyan());
+
+    match &tool.install_method {
+        InstallMethod::Npm(package) => {
+            let status = Command::new("npm")
+                .args(&["install", "-g", package])
+                .status()
+                .context("Failed to run npm install")?;
+
+            if status.success() {
+                println!("{} {} installed successfully!", "✓".green(), tool.name);
+            } else {
+                anyhow::bail!("npm install failed for {}", tool.name);
+            }
+        }
+        InstallMethod::GitHub(repo) => {
+            println!("{} Fetching latest release from GitHub...", "→".cyan());
+
+            // Get the latest release info
+            let url = format!("https://api.github.com/repos/{}/releases/latest", repo);
+            let client = reqwest::Client::new();
+            let response = client
+                .get(&url)
+                .header("User-Agent", "ai-cli-installer")
+                .send()
+                .await
+                .context("Failed to fetch GitHub release")?;
+
+            let release: serde_json::Value = response.json().await?;
+            let tag_name = release["tag_name"]
+                .as_str()
+                .context("No tag_name in release")?;
+
+            // Try to find a binary asset for the current platform
+            let assets = release["assets"]
+                .as_array()
+                .context("No assets in release")?;
+
+            // Look for macOS binary (darwin, macos) or generic binary
+            let os_keywords = ["darwin", "macos", "mac", "universal"];
+            let binary_asset = assets.iter().find(|asset| {
+                if let Some(name) = asset["name"].as_str() {
+                    let name_lower = name.to_lowercase();
+                    os_keywords.iter().any(|keyword| name_lower.contains(keyword))
+                        && !name_lower.ends_with(".sha256")
+                        && !name_lower.ends_with(".txt")
+                } else {
+                    false
+                }
+            });
+
+            if let Some(asset) = binary_asset {
+                let download_url = asset["browser_download_url"]
+                    .as_str()
+                    .context("No download URL")?;
+                let asset_name = asset["name"].as_str().unwrap_or("binary");
+
+                println!("{} Downloading {}...", "→".cyan(), asset_name);
+
+                // Download the binary
+                let binary_data = reqwest::get(download_url)
+                    .await?
+                    .bytes()
+                    .await?;
+
+                // Determine installation path
+                let install_dir = std::path::Path::new("/usr/local/bin");
+                let binary_name = tool.binary_name.as_ref().unwrap_or(&tool.name);
+                let install_path = install_dir.join(binary_name);
+
+                // Write the binary
+                std::fs::write(&install_path, &binary_data)
+                    .context("Failed to write binary")?;
+
+                // Make it executable
+                #[cfg(unix)]
+                {
+                    use std::os::unix::fs::PermissionsExt;
+                    let mut perms = std::fs::metadata(&install_path)?.permissions();
+                    perms.set_mode(0o755);
+                    std::fs::set_permissions(&install_path, perms)?;
+                }
+
+                println!("{} {} installed successfully to {}!",
+                    "✓".green(), tool.name, install_path.display());
+            } else {
+                println!("{} No suitable binary found for your platform.", "✗".red());
+                println!("Please visit https://github.com/{}/releases/tag/{}", repo, tag_name);
+                anyhow::bail!("No binary available for platform");
+            }
+        }
+        InstallMethod::Custom(message) => {
+            println!("{}", message.yellow());
+            anyhow::bail!("Custom installation required");
+        }
+    }
+
+    Ok(())
+}
+
+async fn uninstall_tool(tool: &Tool) -> Result<()> {
+    println!("Uninstalling {}...", tool.name.bright_cyan());
+
+    match &tool.install_method {
+        InstallMethod::Npm(package) => {
+            let status = Command::new("npm")
+                .args(&["uninstall", "-g", package])
+                .status()
+                .context("Failed to run npm uninstall")?;
+
+            if status.success() {
+                println!("{} {} uninstalled successfully!", "✓".green(), tool.name);
+            } else {
+                anyhow::bail!("npm uninstall failed for {}", tool.name);
+            }
+        }
+        InstallMethod::GitHub(_) => {
+            let binary_name = tool.binary_name.as_ref().unwrap_or(&tool.name);
+            let install_path = std::path::Path::new("/usr/local/bin").join(binary_name);
+
+            if install_path.exists() {
+                std::fs::remove_file(&install_path)
+                    .context("Failed to remove binary")?;
+                println!("{} {} uninstalled successfully!", "✓".green(), tool.name);
+            } else {
+                println!("{} {} binary not found at {}",
+                    "!".yellow(), tool.name, install_path.display());
+            }
+        }
+        InstallMethod::Custom(_) => {
+            println!("{} {} requires manual uninstallation", "!".yellow(), tool.name);
+            println!("Please remove it manually from your system");
+        }
+    }
+
+    Ok(())
+}
+
+async fn handle_install_command() -> Result<()> {
+    let tools = get_all_tools();
+
+    // Separate installed and uninstalled tools
+    let mut uninstalled_tools: Vec<&Tool> = tools.iter().filter(|t| !t.is_installed()).collect();
+    let installed_tools: Vec<&Tool> = tools.iter().filter(|t| t.is_installed()).collect();
+
+    if uninstalled_tools.is_empty() {
+        println!("{}", "All tools are already installed! ✓".green());
+        return Ok(());
+    }
+
+    // Sort for consistent display
+    uninstalled_tools.sort_by(|a, b| a.name.cmp(&b.name));
+
+    println!("{}", "\nSelect tools to install:".bright_cyan().bold());
+
+    // Create display strings
+    let options: Vec<String> = uninstalled_tools
+        .iter()
+        .map(|t| format!("{} ({})", t.name, match &t.install_method {
+            InstallMethod::Npm(pkg) => format!("npm: {}", pkg),
+            InstallMethod::GitHub(repo) => format!("github: {}", repo),
+            InstallMethod::Custom(_) => "custom".to_string(),
+        }))
+        .collect();
+
+    // Show installed tools info
+    if !installed_tools.is_empty() {
+        println!("\n{}", "Already installed:".bright_black());
+        for tool in &installed_tools {
+            println!("  {} {}", "✓".green(), tool.name.bright_black());
+        }
+        println!();
+    }
+
+    // Multi-select prompt
+    let selected = MultiSelect::new("Tools:", options)
+        .with_help_message("↑↓ to move, space to select, enter to confirm")
+        .prompt();
+
+    match selected {
+        Ok(selections) if !selections.is_empty() => {
+            println!("\n{}", "Starting installation...".bright_cyan());
+
+            // Find selected tools by matching display strings
+            for selection in selections {
+                if let Some(tool) = uninstalled_tools.iter().find(|t| {
+                    selection.starts_with(&t.name)
+                }) {
+                    if let Err(e) = install_tool(tool).await {
+                        println!("{} Failed to install {}: {}", "✗".red(), tool.name, e);
+                    }
+                }
+            }
+
+            println!("\n{}", "Installation complete!".green().bold());
+        }
+        Ok(_) => {
+            println!("{}", "No tools selected.".yellow());
+        }
+        Err(e) => {
+            println!("{} Selection cancelled: {}", "✗".red(), e);
+        }
+    }
+
+    Ok(())
+}
+
+async fn handle_uninstall_command() -> Result<()> {
+    let tools = get_all_tools();
+
+    // Filter to only installed tools
+    let mut installed_tools: Vec<&Tool> = tools.iter().filter(|t| t.is_installed()).collect();
+
+    if installed_tools.is_empty() {
+        println!("{}", "No tools are currently installed.".yellow());
+        return Ok(());
+    }
+
+    // Sort for consistent display
+    installed_tools.sort_by(|a, b| a.name.cmp(&b.name));
+
+    println!("{}", "\nSelect tools to uninstall:".bright_cyan().bold());
+
+    // Create display strings
+    let options: Vec<String> = installed_tools
+        .iter()
+        .map(|t| t.name.clone())
+        .collect();
+
+    // Multi-select prompt
+    let selected = MultiSelect::new("Tools:", options)
+        .with_help_message("↑↓ to move, space to select, enter to confirm")
+        .prompt();
+
+    match selected {
+        Ok(selections) if !selections.is_empty() => {
+            println!("\n{}", "Starting uninstallation...".bright_cyan());
+
+            for selection in selections {
+                if let Some(tool) = installed_tools.iter().find(|t| t.name == selection) {
+                    if let Err(e) = uninstall_tool(tool).await {
+                        println!("{} Failed to uninstall {}: {}", "✗".red(), tool.name, e);
+                    }
+                }
+            }
+
+            println!("\n{}", "Uninstallation complete!".green().bold());
+        }
+        Ok(_) => {
+            println!("{}", "No tools selected.".yellow());
+        }
+        Err(e) => {
+            println!("{} Selection cancelled: {}", "✗".red(), e);
+        }
+    }
+
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let cli = Cli::parse();
@@ -246,6 +603,12 @@ async fn main() -> Result<()> {
         Some(Commands::Upgrade) => {
             println!("{}", "Upgrade functionality coming soon!".yellow());
             println!("This will upgrade all AI CLI tools to their latest versions.");
+        }
+        Some(Commands::Install) => {
+            handle_install_command().await?;
+        }
+        Some(Commands::Uninstall) => {
+            handle_uninstall_command().await?;
         }
     }
 
