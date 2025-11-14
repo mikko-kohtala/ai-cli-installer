@@ -6,7 +6,7 @@ use clap::{Parser, Subcommand};
 #[command(disable_version_flag = true)]
 #[command(
     about = "Check and manage AI CLI tools versions",
-    long_about = "Check and manage AI CLI tools versions\n\nSupported tools:\n  Claude Code (claude)\n  Amp (amp)\n  Codex (codex)\n  Cursor (cursor)\n  Copilot CLI (copilot)\n  Kilo (kilo)\n  Gemini (gemini)\n  Cline (cline)",
+    long_about = "Check and manage AI CLI tools versions\n\nSupported tools:\n  Claude Code (claude)\n  Amp (amp)\n  Codex (codex)\n  Cursor (cursor)\n  Copilot CLI (copilot)\n  Kilo (kilo)\n  Gemini (gemini)\n  Cline (cline)\n  OpenCode (opencode)\n  Factory CLI (droid)",
     version
 )]
 pub struct Cli {

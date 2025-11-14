@@ -44,6 +44,20 @@ struct BrewCask {
     version: String,
 }
 
+async fn get_factory_cli_latest() -> Option<String> {
+    let script = reqwest::get("https://app.factory.ai/cli")
+        .await
+        .ok()?
+        .text()
+        .await
+        .ok()?;
+
+    script
+        .lines()
+        .find_map(|line| line.trim().strip_prefix("VER=").map(|value| value.trim()))
+        .map(|value| value.trim_matches(|c| c == '"' || c == '\'').to_string())
+}
+
 async fn fetch_npm_latest(url: &str) -> Option<String> {
     let response = reqwest::get(url).await.ok()?;
     let info: NpmPackageInfo = response.json().await.ok()?;
@@ -89,7 +103,12 @@ async fn get_brew_latest(formula: &str) -> Option<String> {
         let info: BrewInfo = serde_json::from_slice(&output.stdout).ok()?;
 
         // Check formulae first
-        if let Some(formula_version) = info.formulae.into_iter().next().and_then(|f| f.versions.stable) {
+        if let Some(formula_version) = info
+            .formulae
+            .into_iter()
+            .next()
+            .and_then(|f| f.versions.stable)
+        {
             return Some(formula_version);
         }
 
@@ -130,6 +149,11 @@ pub async fn check_latest_versions(tools: &mut [ToolVersion]) {
             "Kilo Code CLI",
             tokio::spawn(get_npm_latest("@kilocode/cli")),
         ),
+        ("OpenCode", tokio::spawn(get_brew_latest("opencode"))),
+        (
+            "Factory CLI (droid)",
+            tokio::spawn(get_factory_cli_latest()),
+        ),
     ];
 
     let resolved = join_all(
@@ -148,7 +172,7 @@ pub async fn check_latest_versions(tools: &mut [ToolVersion]) {
     }
 }
 
-pub fn print_version(tool: &ToolVersion, check_latest: bool) {
+pub fn print_version(tool: &ToolVersion, check_latest: bool, width: usize) {
     let status = match &tool.installed {
         Some(version) => {
             let version_str = version.to_string();
@@ -183,7 +207,9 @@ pub fn print_version(tool: &ToolVersion, check_latest: bool) {
         }
     };
 
-    println!("{:15} {}", format!("{}:", tool.name).bold(), status);
+    let padding = width.saturating_sub(tool.name.len());
+    let spacer = " ".repeat(padding + 1);
+    println!("{}{}{}", format!("{}:", tool.name).bold(), spacer, status);
 }
 
 #[cfg(test)]

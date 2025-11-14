@@ -46,12 +46,14 @@ ai-cli-apps remove claude
 
 - **Amp**
 - **Claude Code**
-- **Code CLIx**
+- **Codex CLI**
 - **Cursor CLI**
 - **Copilot CLI**
 - **Kilo Code CLI**
 - **Gemini CLI**
 - **Cline CLI**
+- **OpenCode**
+- **Factory CLI (droid)**
 
 ## Development
 

@@ -250,13 +250,34 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
                 .join("share")
                 .join(binary_name)
                 .join("versions");
-            let config_path = Path::new(&home).join(format!(".{}", binary_name));
+            let config_dirs: Vec<_> = if tool.config_dirs.is_empty() {
+                vec![Path::new(&home).join(format!(".{}", binary_name))]
+            } else {
+                tool.config_dirs
+                    .iter()
+                    .map(|dir| Path::new(&home).join(dir))
+                    .collect()
+            };
+            let mut existing_configs: Vec<_> = config_dirs
+                .into_iter()
+                .filter(|path| path.exists())
+                .collect();
 
             let mut removed_items = Vec::new();
+            let mut binary_paths = vec![symlink_path];
+            binary_paths.extend(
+                tool.extra_binary_paths
+                    .iter()
+                    .map(|extra| Path::new(&home).join(extra)),
+            );
 
-            if symlink_path.exists() {
-                fs::remove_file(&symlink_path).context("Failed to remove binary symlink")?;
-                removed_items.push(format!("binary: {}", symlink_path.display()));
+            for binary_path in binary_paths {
+                if binary_path.exists() {
+                    fs::remove_file(&binary_path).with_context(|| {
+                        format!("Failed to remove binary {}", binary_path.display())
+                    })?;
+                    removed_items.push(format!("binary: {}", binary_path.display()));
+                }
             }
 
             if versions_path.exists() {
@@ -266,19 +287,26 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
                 }
             }
 
-            if config_path.exists() {
-                println!(
-                    "{} Config directory found at: {}",
-                    "→".cyan(),
-                    config_path.display()
-                );
+            if !existing_configs.is_empty() {
+                if existing_configs.len() == 1 {
+                    println!(
+                        "{} Config directory found at: {}",
+                        "→".cyan(),
+                        existing_configs[0].display()
+                    );
+                } else {
+                    println!("{} Config directories found:", "→".cyan());
+                    for path in &existing_configs {
+                        println!("  - {}", path.display());
+                    }
+                }
 
                 if remove_config {
                     let should_remove = if force {
                         true
                     } else {
                         println!(
-                            "{} Remove config directory? (contains settings and history) [y/N]",
+                            "{} Remove config directories? (contains settings and history) [y/N]",
                             "?".yellow()
                         );
                         let mut input = String::new();
@@ -287,16 +315,25 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
                     };
 
                     if should_remove {
-                        fs::remove_dir_all(&config_path)
-                            .context("Failed to remove config directory")?;
-                        removed_items.push(format!("config: {}", config_path.display()));
+                        for path in existing_configs.drain(..) {
+                            fs::remove_dir_all(&path).with_context(|| {
+                                format!("Failed to remove config directory {}", path.display())
+                            })?;
+                            removed_items.push(format!("config: {}", path.display()));
+                        }
                     } else {
-                        println!("{} Keeping config directory", "→".cyan());
+                        println!("{} Keeping config directories", "→".cyan());
                     }
                 } else {
+                    let suffix = if existing_configs.len() > 1 {
+                        "directories"
+                    } else {
+                        "directory"
+                    };
                     println!(
-                        "{} Keeping config directory (use --remove-config to remove it)",
-                        "→".cyan()
+                        "{} Keeping config {} (use --remove-config to remove it)",
+                        "→".cyan(),
+                        suffix
                     );
                 }
             }

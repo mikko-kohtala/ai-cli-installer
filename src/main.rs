@@ -22,6 +22,7 @@ async fn main() -> Result<()> {
             let mut tools = installed_versions();
             check_latest_versions(&mut tools).await;
 
+            let label_width = tools.iter().map(|t| t.name.len()).max().unwrap_or(0);
             let installed: Vec<_> = tools.iter().filter(|t| t.installed.is_some()).collect();
             let not_installed: Vec<_> = tools.iter().filter(|t| t.installed.is_none()).collect();
 
@@ -36,7 +37,7 @@ async fn main() -> Result<()> {
             if !installed.is_empty() {
                 println!("{}", "Installed:".bright_green().bold());
                 for tool in &installed {
-                    print_version(tool, true);
+                    print_version(tool, true, label_width);
                 }
                 if all_up_to_date {
                     println!("\n{}", "✓ All tools are up to date".green());
@@ -49,16 +50,17 @@ async fn main() -> Result<()> {
                 }
                 println!("{}", "Not Installed:".bright_black().bold());
                 for tool in &not_installed {
-                    print_version(tool, true);
+                    print_version(tool, true, label_width);
                 }
             }
         }
         Some(Commands::Check) => {
             let mut tools = installed_versions();
             check_latest_versions(&mut tools).await;
+            let label_width = tools.iter().map(|t| t.name.len()).max().unwrap_or(0);
             println!();
             for tool in &tools {
-                print_version(tool, true);
+                print_version(tool, true, label_width);
             }
         }
         Some(Commands::Upgrade { tool }) | Some(Commands::Update { tool }) => {

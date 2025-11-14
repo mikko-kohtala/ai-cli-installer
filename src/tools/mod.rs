@@ -4,8 +4,10 @@ mod cline;
 mod codex;
 mod copilot;
 mod cursor_agent;
+mod factory;
 mod gemini;
 mod kilo;
+mod opencode;
 
 use std::process::Command;
 
@@ -17,8 +19,12 @@ pub use copilot::{definition as copilot_tool, installed_version as copilot_insta
 pub use cursor_agent::{
     definition as cursor_agent_tool, installed_version as cursor_agent_installed_version,
 };
+pub use factory::{
+    definition as factory_cli_tool, installed_version as factory_cli_installed_version,
+};
 pub use gemini::{definition as gemini_tool, installed_version as gemini_installed_version};
 pub use kilo::{definition as kilo_tool, installed_version as kilo_installed_version};
+pub use opencode::{definition as opencode_tool, installed_version as opencode_installed_version};
 
 #[derive(Debug, Clone)]
 pub enum InstallMethod {
@@ -34,6 +40,8 @@ pub struct Tool {
     pub install_method: InstallMethod,
     pub check_command: Vec<String>,
     pub binary_name: Option<String>,
+    pub config_dirs: Vec<String>,
+    pub extra_binary_paths: Vec<String>,
 }
 
 impl Tool {
@@ -43,11 +51,23 @@ impl Tool {
             install_method,
             check_command,
             binary_name: None,
+            config_dirs: Vec::new(),
+            extra_binary_paths: Vec::new(),
         }
     }
 
     pub fn with_binary_name(mut self, binary_name: &str) -> Self {
         self.binary_name = Some(binary_name.to_string());
+        self
+    }
+
+    pub fn with_config_dir(mut self, config_dir: &str) -> Self {
+        self.config_dirs.push(config_dir.to_string());
+        self
+    }
+
+    pub fn with_extra_binary_path(mut self, path: &str) -> Self {
+        self.extra_binary_paths.push(path.to_string());
         self
     }
 
@@ -96,6 +116,8 @@ pub fn catalog() -> Vec<Tool> {
         kilo_tool(),
         gemini_tool(),
         cline_tool(),
+        opencode_tool(),
+        factory_cli_tool(),
     ]
 }
 
@@ -109,6 +131,8 @@ pub fn installed_versions() -> Vec<ToolVersion> {
         kilo_installed_version(),
         gemini_installed_version(),
         cline_installed_version(),
+        opencode_installed_version(),
+        factory_cli_installed_version(),
     ]
 }
 
