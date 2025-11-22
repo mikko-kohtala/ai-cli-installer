@@ -77,10 +77,9 @@ pub async fn handle_install_command(tool_name: Option<&str>) -> Result<()> {
                 if let Some(tool) = uninstalled_tools
                     .iter()
                     .find(|t| selection.starts_with(&t.name))
+                    && let Err(e) = install_tool(tool).await
                 {
-                    if let Err(e) = install_tool(tool).await {
-                        println!("{} Failed to install {}: {}", "✗".red(), tool.name, e);
-                    }
+                    println!("{} Failed to install {}: {}", "✗".red(), tool.name, e);
                 }
             }
 
@@ -140,10 +139,10 @@ pub async fn handle_uninstall_command(
             println!("\n{}", "Starting uninstallation...".bright_cyan());
 
             for selection in selections {
-                if let Some(tool) = installed_tools.iter().find(|t| t.name == selection) {
-                    if let Err(e) = uninstall_tool(tool, remove_config, force).await {
-                        println!("{} Failed to uninstall {}: {}", "✗".red(), tool.name, e);
-                    }
+                if let Some(tool) = installed_tools.iter().find(|t| t.name == selection)
+                    && let Err(e) = uninstall_tool(tool, remove_config, force).await
+                {
+                    println!("{} Failed to uninstall {}: {}", "✗".red(), tool.name, e);
                 }
             }
 
@@ -214,7 +213,7 @@ async fn install_tool(tool: &Tool) -> Result<()> {
         }
         InstallMethod::Npm(package) => {
             let status = Command::new("npm")
-                .args(&["install", "-g", package])
+                .args(["install", "-g", package])
                 .status()
                 .context("Failed to run npm install")?;
 
@@ -235,10 +234,7 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
     match &tool.install_method {
         InstallMethod::Bootstrap(_) => {
             let home = std::env::var("HOME").context("HOME environment variable not set")?;
-            let binary_name = tool
-                .binary_name
-                .as_deref()
-                .unwrap_or_else(|| tool.name.as_str());
+            let binary_name = tool.binary_name.as_deref().unwrap_or(tool.name.as_str());
 
             let symlink_path = Path::new(&home)
                 .join(".local")
@@ -280,11 +276,11 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
                 }
             }
 
-            if versions_path.exists() {
-                if let Some(parent) = versions_path.parent() {
-                    fs::remove_dir_all(parent).context("Failed to remove versions directory")?;
-                    removed_items.push(format!("versions: {}", parent.display()));
-                }
+            if versions_path.exists()
+                && let Some(parent) = versions_path.parent()
+            {
+                fs::remove_dir_all(parent).context("Failed to remove versions directory")?;
+                removed_items.push(format!("versions: {}", parent.display()));
             }
 
             if !existing_configs.is_empty() {
@@ -440,7 +436,7 @@ async fn uninstall_tool(tool: &Tool, remove_config: bool, force: bool) -> Result
         }
         InstallMethod::Npm(package) => {
             let status = Command::new("npm")
-                .args(&["uninstall", "-g", package])
+                .args(["uninstall", "-g", package])
                 .status()
                 .context("Failed to run npm uninstall")?;
 

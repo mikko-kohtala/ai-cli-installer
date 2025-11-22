@@ -126,7 +126,7 @@ pub async fn check_latest_versions(tools: &mut [ToolVersion]) {
     spinner.set_style(
         ProgressStyle::default_spinner()
             .template("{spinner:.cyan} {msg}")
-            .unwrap()
+            .unwrap(),
     );
     spinner.enable_steady_tick(std::time::Duration::from_millis(80));
 
@@ -215,10 +215,7 @@ pub fn print_version(tool: &ToolVersion, check_latest: bool, label_width: usize,
 
     let name_padding = label_width.saturating_sub(tool.name.len());
     let name_spacer = " ".repeat(name_padding + 1);
-    let identifier = tool
-        .identifier
-        .as_deref()
-        .unwrap_or_else(|| tool.name.as_str());
+    let identifier = tool.identifier.as_deref().unwrap_or(tool.name.as_str());
     let id_padding = id_width.saturating_sub(identifier.len());
     let id_spacer = " ".repeat(id_padding + 1);
 

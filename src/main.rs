@@ -24,7 +24,7 @@ async fn main() -> Result<()> {
             spinner.set_style(
                 ProgressStyle::default_spinner()
                     .template("{spinner:.cyan} {msg}")
-                    .unwrap()
+                    .unwrap(),
             );
             spinner.enable_steady_tick(std::time::Duration::from_millis(80));
             spinner.set_message("Checking installed tools...");
@@ -76,7 +76,7 @@ async fn main() -> Result<()> {
             spinner.set_style(
                 ProgressStyle::default_spinner()
                     .template("{spinner:.cyan} {msg}")
-                    .unwrap()
+                    .unwrap(),
             );
             spinner.enable_steady_tick(std::time::Duration::from_millis(80));
             spinner.set_message("Checking installed tools...");

@@ -1,0 +1,14 @@
+# Rust formatter configuration
+# Industry standard settings for consistent code formatting
+
+edition = "2024"
+max_width = 100
+use_small_heuristics = "Default"
+reorder_imports = true
+reorder_modules = true
+
+# Nightly-only features (commented out for stable Rust)
+# imports_granularity = "Crate"
+# group_imports = "StdExternalCrate"
+# normalize_comments = true
+# wrap_comments = true

@@ -31,7 +31,7 @@ pub fn installed_version() -> ToolVersion {
                     None
                 }
             })
-            .last()
+            .next_back()
     });
     ToolVersion::new("Factory CLI")
         .with_installed(installed)
